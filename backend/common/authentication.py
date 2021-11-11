@@ -3,36 +3,15 @@ from rest_framework.authentication import BaseAuthentication
 
 from users.models import User
 
-from rest_framework_simplejwt.tokens import RefreshToken
-
 from backend.settings import SECRET_KEY
 
 import jwt
+import datetime
 
-def get_tokens_for_user(user):
-    refresh = RefreshToken.for_user(user)
-
-    return {
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-    }
-
-def verify_jwt_token(refresh_token: str):
-  try:
-    payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=["HS256"])
-  except jwt.ExpiredSignatureError:
-    return None
-
-  return payload
 
 class JWTAuthentication(BaseAuthentication):
 
   def authenticate(self, request):
-      # print()
-
-      # if not "Authorization" in request.headers:
-      #   raise exceptions.AuthenticationFailed("Please proveide access token")
-
       token = request.COOKIES.get("refresh")
 
       if not token:
@@ -44,10 +23,18 @@ class JWTAuthentication(BaseAuthentication):
         raise exceptions.AuthenticationFailed("unauthenticated")
 
       user = User.objects.get(pk=payload["user_id"])
-
-      print(user)
-      print("travelled through me common/authentication.py")
       if user is None:
         raise exceptions.AuthenticationFailed("User not found")
 
       return (user, None)
+
+  @staticmethod
+  def generate_jwt(id: int, scope: str):
+    payload = {
+      "user_id": id,
+      "scope": scope,
+      "exp": datetime.datetime.utcnow() + datetime.timedelta(days=30),
+      "iat": datetime.datetime.utcnow()
+    }
+
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")

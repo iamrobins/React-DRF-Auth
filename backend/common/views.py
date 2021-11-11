@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from users.models import User
 from .serializers import UserSerializer
 from rest_framework.response import Response
-from .authentication import get_tokens_for_user, verify_jwt_token, JWTAuthentication
+from .authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 # from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -21,13 +21,11 @@ class RegisterAPIView(APIView):
     return Response(serializer.data)
 
 
-
-
 class LoginAPIView(APIView):
 
   def get(self, request):
     print(request.user)
-    return Response("login hi")
+    return Response("login hi GET route")
 
   def post(self, request):
     email = request.data["email"]
@@ -41,13 +39,26 @@ class LoginAPIView(APIView):
     if not user.check_password(password):
       raise exceptions.AuthenticationFailed("Incorrect Password")
 
-    token = get_tokens_for_user(user)
+    scope = "admin"
+
+    if "api/admin/" not in request.path:
+      scope = "user"
+
+    token = JWTAuthentication.generate_jwt(user.id, scope)
 
     response = Response()
 
-    response.set_cookie("refresh", token["refresh"], httponly=True)
-    response.data = {"access_token": token["access"]}
+    response.set_cookie("refresh", token, httponly=True)
+    response.data = {"message": "success"}
 
+    return response
+
+class LogoutAPIView(APIView):
+
+  def get(self, _):
+    response = Response()
+    response.delete_cookie("refresh")
+    response.data = {"message": "success"}
     return response
 
 
@@ -62,24 +73,3 @@ class ProfileAPIView(APIView):
       raise exceptions.APIException("User not found")
 
     return Response(UserSerializer(user).data)
-
-class RefreshTokenObtainView(APIView):
-
-  def get(self, request):
-    refresh_token = request.COOKIES.get("refresh")
-    payload = verify_jwt_token(refresh_token)
-
-    if payload is None:
-      raise exceptions.AuthenticationFailed("Refresh Token Expire/Invalid")
-
-    user = User.objects.get(pk=payload["user_id"])
-
-    if user is None:
-        raise exceptions.AuthenticationFailed("User not found")
-
-    token = get_tokens_for_user(user)
-    response = Response()
-    response.set_cookie("refresh", token["refresh"], httponly=True)
-    response.data = {"access_token": token["access"]}
-
-    return response
