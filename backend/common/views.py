@@ -4,9 +4,9 @@ from rest_framework.views import APIView
 from users.models import User
 from .serializers import UserSerializer
 from rest_framework.response import Response
-from .authentication import get_tokens_for_user, verify_jwt_token
+from .authentication import get_tokens_for_user, verify_jwt_token, JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
+# from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class RegisterAPIView(APIView):
 
@@ -45,7 +45,7 @@ class LoginAPIView(APIView):
 
     response = Response()
 
-    response.set_cookie("jwt", token["refresh"], httponly=True)
+    response.set_cookie("refresh", token["refresh"], httponly=True)
     response.data = {"access_token": token["access"]}
 
     return response
@@ -63,10 +63,10 @@ class ProfileAPIView(APIView):
 
     return Response(UserSerializer(user).data)
 
-class MyRefreshToken(APIView):
+class RefreshTokenObtainView(APIView):
 
   def get(self, request):
-    refresh_token = request.COOKIES.get("jwt")
+    refresh_token = request.COOKIES.get("refresh")
     payload = verify_jwt_token(refresh_token)
 
     if payload is None:
@@ -78,10 +78,8 @@ class MyRefreshToken(APIView):
         raise exceptions.AuthenticationFailed("User not found")
 
     token = get_tokens_for_user(user)
-
     response = Response()
-
-    response.set_cookie("jwt", token["refresh"], httponly=True)
+    response.set_cookie("refresh", token["refresh"], httponly=True)
     response.data = {"access_token": token["access"]}
 
     return response

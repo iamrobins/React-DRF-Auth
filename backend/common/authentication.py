@@ -28,14 +28,12 @@ def verify_jwt_token(refresh_token: str):
 class JWTAuthentication(BaseAuthentication):
 
   def authenticate(self, request):
-      print()
+      # print()
 
-      if not "Authorization" in request.headers:
-        raise exceptions.AuthenticationFailed("Please proveide access token")
+      # if not "Authorization" in request.headers:
+      #   raise exceptions.AuthenticationFailed("Please proveide access token")
 
-      # token = request.COOKIES.get("jwt")
-      print(request.headers["Authorization"].split()[1])
-      token = request.headers["Authorization"].split()[1]
+      token = request.COOKIES.get("refresh")
 
       if not token:
         return None
@@ -48,7 +46,7 @@ class JWTAuthentication(BaseAuthentication):
       user = User.objects.get(pk=payload["user_id"])
 
       print(user)
-
+      print("travelled through me common/authentication.py")
       if user is None:
         raise exceptions.AuthenticationFailed("User not found")
 
